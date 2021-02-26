@@ -1,0 +1,91 @@
+1. have >=3 vms
+2. on one of them install ansible and create a user
+
+
+[root@localhost]# yum install epel-release
+[root@localhost]# yum install ansible
+
+sudo useradd ans
+
+3. using ansible ad-hoc create the same user on the rest of machines, setup ssh keys and sudo for that user
+
+
+[root@localhost ansible]# vi hosts
+
+[all]
+
+
+
+
+centos_1 ansible_ssh_host=192.168.56.129 ansible_user=root ansible_ssh_private_key_file=/home/root/.ssh/id_rsa
+centos_2 ansible_ssh_host=192.168.56.130 ansible_user=root ansible_ssh_private_key_file=/home/root/.ssh/id_rsa
+
+
+
+Создали
+
+
+
+генерим пароль
+python3 -c 'import crypt,getpass;pw=getpass.getpass();print(crypt.crypt(pw) if (pw==getpass.getpass("Confirm: ")) else exit())'
+
+$6$kmp7frvM2F0oB7Yh$9LJuDkE9f2Bog1V8ID3NM7Ap0gRjBzwTdZgTM4hIbC7GMOeDjRZiFVMNTgWaFc/evKlEEtuajdkYm0EeAKy5P0
+
+Создаем юзера
+
+ansible -i hosts all -m user -a 'name=ans password="$6$kmp7frvM2F0oB7Yh$9LJuDkE9f2Bog1V8ID3NM7Ap0gRjBzwTdZgTM4hIbC7GMOeDjRZiFVMNTgWaFc/evKlEEtuajdkYm0EeAKy5P0"' -u root -k -b -K 
+
+
+генерим ключи
+[root@localhost .ssh]# ssh-keygen -t rsa
+
+
+[root@localhost .ssh]# ssh-copy-id -i id_rsa.pub root@192.168.56.129
+[root@localhost .ssh]# ssh-copy-id -i id_rsa.pub root@192.168.56.130
+
+чек 
+[root@localhost .ssh]# ssh root@192.168.56.130
+[ans@localhost ~]$
+
+
+теперь sudo:
+[root@localhost ansible]# ansible -i hosts all -m shell -a "sudo usermod -aG wheel ans"
+[WARNING]: Consider using 'become', 'become_method', and 'become_user' rather than running sudo
+centos_1 | CHANGED | rc=0 >>
+
+centos_2 | CHANGED | rc=0 >>
+
+
+
+
+check:
+
+[root@localhost ans]# groups ans
+ans : ans wheel
+
+
+
+
+
+
+4. write a playbook that:
+
+[root@localhost playbook]# ansible-playbook task_1.yml
+
+
+- updates all packages on the systems
+
+- installs ntp, nginx and mysql
+
+
+
+- for ntp replaces default config with your own (you can find ntp servers on the internet)
+
+
+- for mysql creates user and database (using corresponding module)
+
+
+
+
+* for nginx creates directory /web and places there files for some test site (you can find them on the internet and you may want to fix nginx.conf appropriately)
+5. ** create a playbook that will setup a user as in the 2nd task
