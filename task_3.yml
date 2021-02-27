@@ -1,0 +1,14 @@
+---
+
+
+- name: task_3
+  hosts: all
+  
+  
+  tasks:
+    - name: ntp replaces default config with your own (you can find ntp servers on the internet)
+      shell: |
+        sed -i "s/server 0.centos.pool.ntp.org/server 0.us.pool.ntp.org/" /etc/ntp.conf	
+    - name: restart daemon ntpd
+      shell: |
+        /bin/systemctl restart ntpd.service
