@@ -1,0 +1,14 @@
+---
+
+- name: Simple playbook using module ping
+  hosts: all
+  become: yes
+
+  tasks:
+  - name: module ping
+    ping:
+    register: result
+
+  - debug:
+      var: result
+
