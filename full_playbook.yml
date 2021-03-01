@@ -1,0 +1,97 @@
+---
+
+
+- name: full
+  hosts: all  
+  become: yes
+
+
+
+
+
+  tasks:
+    
+    
+    - name: upgrade all packages
+      yum: name=* state=latest
+
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+
+    - name: Install ntp, nginx
+      yum:
+        name:        
+          - ntp
+          - nginx
+        state: present
+
+
+    - name: Install MySQL 5.7
+      yum: pkg={{ item }}
+      with_items:
+      - mysql-community-server
+      - mysql-community-client
+      - MySQL-python
+
+
+
+    - name: ntp replaces default config with your own (you can find ntp servers on the internet)
+      shell: |
+        sed -i "s/server 0.centos.pool.ntp.org/server 0.us.pool.ntp.org/" /etc/ntp.conf
+        sed -i "s/server 1.centos.pool.ntp.org/server 1.us.pool.ntp.org/" /etc/ntp.conf
+        sed -i "s/server 2.centos.pool.ntp.org/server 2.us.pool.ntp.org/" /etc/ntp.conf
+        sed -i "s/server 3.centos.pool.ntp.org/server 3.us.pool.ntp.org/" /etc/ntp.conf
+
+
+    - name: restart daemon ntpd
+      shell: |
+        /bin/systemctl restart ntpd.service
+
+    - name: Start the MySQL service
+      action: service name=mysqld state=started  
+
+    - name: find temporary password
+      shell: |
+        cat /var/log/mysqld.log | grep "A temporary password is generated for" | tail -1 | sed -n 's/.*root@localhost: //p'
+      register: temp_password
+
+
+    - name: try find .my.cnf
+      stat:
+        path: /root/.my.cnf
+      register: cnf
+
+
+    - name: set password 
+      shell: 'mysql -e "SET PASSWORD = PASSWORD(''{{ password }}'');" --connect-expired-password -u root -p"{{ temp_password.stdout }}"'
+      when: cnf.stat.exists==False
+
+
+    - name: copy .my.cnf from host mashine
+      copy: src=/root/.my.cnf dest=/root/.my.cnf mode=0600
+      when: cnf.stat.exists==False    
+
+    - name: restart MySQL
+      action: service name=mysqld state=restarted
+      when: cnf.stat.exists==False
+
+
+
+    - name: Create database user using hashed password with all database privileges
+      mysql_user:
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        user: bob
+        password: "12345"
+        priv: '*.*:ALL'
+        state: present
+
+
+
+    - name: Create a new database with name 'bobdata'
+      mysql_db:      
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        name: bobdata
+        state: present
