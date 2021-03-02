@@ -1,0 +1,33 @@
+---
+
+- name: first task
+  hosts: all
+  become: yes
+
+
+
+  tasks:
+  
+  - name: Install EPEL repository
+    yum:
+      name: epel-release
+      state: present
+    
+    
+  - name: Install ntp, nginx
+    yum:
+      name:        
+        - ntp
+        - nginx
+      state: present
+          
+
+  - name: Install MySQL 5.7 repo
+    yum: name=http://dev.mysql.com/get/mysql57-community-release-el7-8.noarch.rpm state=present
+
+  - name: Install MySQL 5.7
+    yum: pkg={{ item }}
+    with_items:
+    - mysql-community-server
+    - mysql-community-client
+    - MySQL-python
